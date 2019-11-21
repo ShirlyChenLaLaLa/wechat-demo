@@ -1,0 +1,91 @@
+<style lang="less">
+.container {
+  height: 100%;
+  background: #f9f7f7;
+}
+
+.property {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 32rpx;
+  background: #fff;
+  .qrCodeContainer {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 32rpx;
+  }
+  .banner {
+    width: 100%;
+  }
+  .qrCode {
+    width: 200rpx;
+    height: 200rpx;
+    margin-left: 32rpx;
+  }
+  .title {
+    font-size: 36rpx;
+    font-weight: 600;
+    color: #4c4c4c;
+  }
+  .scanText {
+    font-size: 28rpx;
+    color: #9e9e9e;
+  }
+  .textContainer {
+    display: flex;
+    flex-direction: column;
+    margin-left: 32rpx;
+  }
+}
+
+#hoCanvas {
+  position: absolute;
+  top: 100px;
+  position: fixed;
+  top: -10000px;
+  height: 375px;
+  width: 372px;
+}
+</style>
+<template>
+  <view class="container">
+    <map id="map" longitude="113.324520" latitude="23.099994" scale="14" controls="{{controls}}" bindcontroltap="controltap" markers="{{markers}}" bindmarkertap="markertap" polyline="{{polyline}}" bindregionchange="regionchange" show-location style="width: 100%; height: 300px;"></map>
+  </view>
+</template>
+<script>
+import wepy from 'wepy'
+
+export default class Index extends wepy.page {
+  config = {
+    navigationBarTitleText: 'student.com demo2'
+  }
+  components = {}
+  data = {
+    polyline: [{
+      points: [{
+        longitude: 113.3245211,
+        latitude: 23.10229
+      }, {
+        longitude: 113.324520,
+        latitude: 23.21229
+      }],
+      color: '#FF0000DD',
+      width: 2,
+      dottedLine: true
+    }]
+  }
+  methods = {
+  }
+
+  events = {}
+
+  onShow() {
+  }
+
+  onLoad() {
+  }
+}
+</script>

@@ -1,0 +1,259 @@
+<style lang="less">
+.container {
+  height: 100%;
+  background: #f9f7f7;
+}
+.qrCode {
+  width: 300rpx;
+  height: 300rpx;
+}
+.property {
+  width: 100%;
+  padding-bottom: 32rpx;
+  background: #fff;
+  .banner {
+    width: 100%;
+  }
+  .title {
+    margin-left: 32rpx;
+    font-size: 36rpx;
+    font-weight: 600;
+  }
+}
+
+#hoCanvas {
+  position: absolute;
+  top: 100px;
+  position: fixed;
+  top: -10000px;
+  height: 345px;
+  width: 345px;
+}
+</style>
+<template>
+  <view class="container">
+    <view class="property">
+      <image class="banner" src="../../imgs/banner.jpg" />
+      <image class="qrCode" src="../../imgs/qrcode.jpg" />
+      <view>
+        <text class="title">学旅家-Find your perfect home</text>
+        <text>长按扫码识别图中的二维码</text>
+      </view>
+    </view>
+    <button @tap="savePoster">生成图片</button>
+    <canvas id="hoCanvas" canvas-id="hoCanvas" />
+    <view>
+      <video id="myVideo" src="http://wxsnsdy.tc.qq.com/105/20210/snsdyvideodownload?filekey=30280201010421301f0201690402534804102ca905ce620b1241b726bc41dcff44e00204012882540400&bizid=1023&hy=SH&fileparam=302c020101042530230204136ffd93020457e3c4ff02024ef202031e8d7f02030f42400204045a320a0201000400" danmu-list="{{danmuList}}" enable-danmu danmu-btn controls></video>
+      <view class="btn-area">
+        <input @blur="bindInputBlur" />
+        <button @tap="bindSendDanmu">发送弹幕</button>
+      </view>
+    </view>
+    <button open-type="launchApp" app-parameter="wechat" @error="launchAppError">跳到app</button>
+  </view>
+
+</template>
+
+<script>
+import wepy from 'wepy'
+
+function getRandomColor() {
+  let rgb = []
+  for (let i = 0; i < 3; ++i) {
+    let color = Math.floor(Math.random() * 256).toString(16)
+    color = color.length === 1 ? '0' + color : color
+    rgb.push(color)
+  }
+  return '#' + rgb.join('')
+}
+export default class Index extends wepy.page {
+  config = {
+    navigationBarTitleText: '图片和视频demo'
+  }
+  components = {}
+  data = {
+    userInfo: {
+      nickName: '加载中...'
+    }
+  }
+  methods = {
+    launchAppError: (e) => {
+      console.log(e.detail.errMsg)
+    },
+    bindSendDanmu: () => {
+      this.videoContext.sendDanmu({
+        text: this.inputValue,
+        color: getRandomColor()
+      })
+    },
+    bindInputBlur: (e) => {
+      this.inputValue = e.detail.value
+    },
+    savePoster: () => {
+      let dpr = 1
+      wx.getSystemInfo({
+        success: (res) => {
+          dpr = res.pixelRatio
+        }
+      })
+      // 获取背景图片信息
+      wx.showLoading({
+        title: '分享图片生成中...',
+        icon: 'loading'
+        // duration: 1000
+      })
+      /* 图片获取成功才执行后续代码 */
+      const wxGetImageInfo = this.methods.promisify(wx.getImageInfo)
+      console.log('cover', this.coverPhoto, this.avatar, this.codeUrl)
+      Promise.all([
+        wxGetImageInfo({
+          src: this.coverPhoto
+        }),
+        wxGetImageInfo({
+          src: this.avatar
+        }),
+        wxGetImageInfo({
+          src: this.codeUrl
+        })
+      ]).then(res => {
+        const ctx = wx.createCanvasContext('hoCanvas')
+        ctx.setFillStyle('white')
+        ctx.fillRect(0, 0, 345, 345)
+        // 底图
+        var w = res[0].width
+        var h = res[0].height
+        var dw = 345 / w // canvas与图片的宽高比
+        var dh = 250 / h
+        // 裁剪图片中间部分
+        if ((w > 345 && h > 250) || (w < 345 && h < 250)) {
+          if (dw > dh) {
+            ctx.drawImage(
+              res[0].path,
+              0,
+              (h - 250 / dw) / 2,
+              w,
+              250 / dw,
+              0,
+              0,
+              345,
+              250
+            )
+          } else {
+            ctx.drawImage(
+              res[0].path,
+              (w - 345 / dh) / 2,
+              0,
+              345 / dh,
+              h,
+              0,
+              0,
+              345,
+              250
+            )
+          }
+        } else {
+          if (w < 345) {
+            ctx.drawImage(
+              res[0].path,
+              0,
+              (h - 250 / dw) / 2,
+              w,
+              250 / dw,
+              0,
+              0,
+              345,
+              250
+            )
+          } else {
+            ctx.drawImage(
+              res[0].path,
+              (w - 345 / dh) / 2,
+              0,
+              345 / dh,
+              h,
+              0,
+              0,
+              345,
+              250
+            )
+          }
+        }
+        // 绘制头像
+        ctx.setStrokeStyle('white')
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(48, 242, 27, 0, 2 * Math.PI)
+        ctx.stroke()
+        ctx.clip()
+        const qrImgSize = 54
+        ctx.drawImage(res[1].path, 21, 215, qrImgSize, qrImgSize)
+        ctx.restore()
+        // solgan
+        ctx.setFillStyle('#292627')
+        ctx.setFontSize(16)
+        ctx.fillText(this.slogan, 21, 290)
+        ctx.setFillStyle('#888888')
+        ctx.setFontSize(16)
+        ctx.fillText('啦啦啦啦啦', 21, 320)
+        // 小程序码
+        ctx.drawImage(res[2].path, 275, 270, qrImgSize, qrImgSize)
+        ctx.stroke()
+        ctx.draw()
+        setTimeout(() => {
+          wx.canvasToTempFilePath({
+            x: 0,
+            y: 0,
+            width: 345,
+            height: 345,
+            destWidth: 345 * dpr,
+            destHeight: 345 * dpr,
+            canvasId: 'hoCanvas',
+            success: res => {
+              console.log(res)
+              this.postUrl = res.tempFilePath
+              this.methods.saveImageToAlbum()
+              wepy.hideLoading()
+            },
+            fail: res => { }
+          })
+        }, 500)
+      })
+    },
+
+    saveImageToAlbum: () => {
+      // 将图片保存到相册
+      wx.saveImageToPhotosAlbum({
+        filePath: this.postUrl,
+        success(res) {
+          wx.showModal({
+            title: '保存成功',
+            content: '图片成功保存到相册了，快去分享朋友圈吧',
+            showCancel: false,
+            confirmText: '好的',
+            confirmColor: '#818FFB',
+            success: res => {
+              // if (res.confirm) {
+              //   // this.showPosterImage = true;
+              //   // this.$apply();
+              //   setTimeout(() => {
+              //     // this.showPosterImage = false;
+              //     // this.$apply();
+              //   }, 1000);
+              // }
+            }
+          })
+        }
+      })
+    }
+  }
+
+  events = {}
+
+  onShow() {
+  }
+
+  onLoad() {
+    this.videoContext = wx.createVideoContext('myVideo')
+  }
+}
+</script>

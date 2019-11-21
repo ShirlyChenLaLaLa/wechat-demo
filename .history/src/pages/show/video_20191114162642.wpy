@@ -1,0 +1,353 @@
+<style lang="less">
+.container {
+  height: 100%;
+  background: #f9f7f7;
+}
+#hoCanvas {
+  position: absolute;
+  top: 100px;
+  position: fixed;
+  top: -10000px;
+  height: 345px;
+  width: 345px;
+}
+</style>
+<template>
+  <view class="container">
+    <button @tap="savePoster">生成图片</button>
+    <image class="qrCode" src="{{qrCode}}" />
+    <canvas id="hoCanvas" canvas-id="hoCanvas" />
+  </view>
+
+</template>
+
+<script>
+import wepy from 'wepy'
+import { domain } from '../../constants/config'
+import qrCode from '../../imgs/qrcode.jpg'
+
+
+export default class Index extends wepy.page {
+  config = {
+    navigationBarTitleText: '点赏'
+  }
+  components = {}
+  data = {
+    userInfo: {
+      nickName: '加载中...'
+    },
+    qrCode,
+  }
+  methods = {
+    savePoster: () => {
+      let dpr = 1;
+      wx.getSystemInfo({
+        success: (res) => {
+          dpr = res.pixelRatio
+        }
+      })
+      // 获取背景图片信息
+      wx.showLoading({
+        title: '分享图片生成中...',
+        icon: 'loading'
+        // duration: 1000
+      })
+      /* 图片获取成功才执行后续代码 */
+      const wxGetImageInfo = this.methods.promisify(wx.getImageInfo)
+      console.log('cover', this.coverPhoto, this.avatar, this.codeUrl)
+      Promise.all([
+        wxGetImageInfo({
+          src: this.coverPhoto
+        }),
+        wxGetImageInfo({
+          src: this.avatar
+        }),
+        wxGetImageInfo({
+          src: this.codeUrl
+        })
+      ]).then(res => {
+        const ctx = wx.createCanvasContext('hoCanvas')
+        ctx.setFillStyle('white')
+        ctx.fillRect(0, 0, 345, 345)
+        // 底图
+        var w = res[0].width
+        var h = res[0].height
+        var dw = 345 / w // canvas与图片的宽高比
+        var dh = 250 / h
+        // 裁剪图片中间部分
+        if ((w > 345 && h > 250) || (w < 345 && h < 250)) {
+          if (dw > dh) {
+            ctx.drawImage(
+              res[0].path,
+              0,
+              (h - 250 / dw) / 2,
+              w,
+              250 / dw,
+              0,
+              0,
+              345,
+              250
+            )
+          } else {
+            ctx.drawImage(
+              res[0].path,
+              (w - 345 / dh) / 2,
+              0,
+              345 / dh,
+              h,
+              0,
+              0,
+              345,
+              250
+            )
+          }
+        } else {
+          if (w < 345) {
+            ctx.drawImage(
+              res[0].path,
+              0,
+              (h - 250 / dw) / 2,
+              w,
+              250 / dw,
+              0,
+              0,
+              345,
+              250
+            )
+          } else {
+            ctx.drawImage(
+              res[0].path,
+              (w - 345 / dh) / 2,
+              0,
+              345 / dh,
+              h,
+              0,
+              0,
+              345,
+              250
+            )
+          }
+        }
+        // 绘制头像
+        ctx.setStrokeStyle('white')
+        ctx.save()
+        ctx.beginPath()
+        ctx.arc(48, 242, 27, 0, 2 * Math.PI)
+        ctx.stroke()
+        ctx.clip()
+        const qrImgSize = 54
+        ctx.drawImage(res[1].path, 21, 215, qrImgSize, qrImgSize)
+        ctx.restore()
+        // solgan
+        ctx.setFillStyle('#292627')
+        ctx.setFontSize(16)
+        ctx.fillText(this.slogan, 21, 290)
+        ctx.setFillStyle('#888888')
+        ctx.setFontSize(16)
+        ctx.fillText('啦啦啦啦啦', 21, 320)
+        // 小程序码
+        ctx.drawImage(res[2].path, 275, 270, qrImgSize, qrImgSize)
+        ctx.stroke()
+        ctx.draw()
+        setTimeout(() => {
+          wx.canvasToTempFilePath({
+            x: 0,
+            y: 0,
+            width: 345,
+            height: 345,
+            destWidth: 345 * dpr,
+            destHeight: 345 * dpr,
+            canvasId: 'hoCanvas',
+            success: res => {
+              console.log(res)
+              this.postUrl = res.tempFilePath
+              this.methods.saveImageToAlbum()
+              wepy.hideLoading()
+            },
+            fail: res => { }
+          })
+        }, 500)
+      })
+    },
+
+    saveImageToAlbum: () => {
+      // 将图片保存到相册
+      wx.saveImageToPhotosAlbum({
+        filePath: this.postUrl,
+        success(res) {
+          wx.showModal({
+            title: '保存成功',
+            content: '图片成功保存到相册了，快去分享朋友圈吧',
+            showCancel: false,
+            confirmText: '好的',
+            confirmColor: '#818FFB',
+            success: res => {
+              // if (res.confirm) {
+              //   // this.showPosterImage = true;
+              //   // this.$apply();
+              //   setTimeout(() => {
+              //     // this.showPosterImage = false;
+              //     // this.$apply();
+              //   }, 1000);
+              // }
+            }
+          })
+        }
+      })
+    }
+  }
+
+  events = {}
+
+  onShow() {
+    const token = wx.getStorageSync('token')
+    console.log(token)
+    if (token) {
+      this.getDetail(token)
+      wepy.request({
+        method: 'GET',
+        url: `${domain}/api/v1/compliment/generateCode`,
+        header: {
+          token: token
+        },
+        success: res => {
+          if (res && res.data) {
+            console.log(res)
+            this.codeUrl = res.data.data
+            this.$apply()
+          }
+        }
+      })
+    } else {
+      wepy.login({
+        success: res => {
+          wepy.request({
+            method: 'POST',
+            url: `${domain}/api/v1/account/login`,
+            data: {
+              code: res.code
+            },
+            success: res => {
+              if (res && res.data && res.data.code === 1) {
+                wepy.setStorage({
+                  key: 'openid',
+                  data: res.data.data.openid
+                })
+                wepy.setStorage({
+                  key: 'token',
+                  data: res.data.token
+                })
+                this.coverPhoto = res.data.data.cover
+                  ? res.data.data.cover
+                  : res.data.data.avatar
+                this.slogan = res.data.data ? res.data.data.slogan : ''
+                this.avatar = res.data.data ? res.data.data.avatar : ''
+                this.userInfo = res.data.data
+                this.compliment_id = res.data.compliment_id
+                wepy.request({
+                  method: 'GET',
+                  url: `${domain}/api/v1/compliment/generateCode`,
+                  header: {
+                    token: res.data.token
+                  },
+                  success: res => {
+                    if (res && res.data) {
+                      this.codeUrl = res.data.data
+                      this.$apply()
+                    }
+                  }
+                })
+                wepy.updateShareMenu({
+                  withShareTicket: true,
+                  templateInfo: {
+                    parameterList: [
+                      {
+                        name: 'compliment_id',
+                        value: res.data.compliment_id
+                      }
+                    ]
+                  }
+                })
+                this.$apply()
+              }
+            }
+          })
+        }
+      })
+    }
+  }
+
+  getDetail() {
+    wepy.request({
+      method: 'GET',
+      url: `${domain}/api/v1/account/detail`,
+      header: {
+        token: wx.getStorageSync('token')
+      },
+      success: res => {
+        if (res && res.data && res.data.data) {
+          this.coverPhoto = res.data.data.cover
+            ? res.data.data.cover
+            : res.data.data.avatar
+          this.slogan = res.data.data ? res.data.data.slogan : ''
+          this.avatar = res.data.data ? res.data.data.avatar : ''
+          this.userInfo = res.data.data
+          this.compliment_id = res.data.compliment_id
+          wepy.updateShareMenu({
+            withShareTicket: true,
+            templateInfo: {
+              parameterList: [
+                {
+                  name: 'compliment_id',
+                  value: res.data.compliment_id
+                }
+              ]
+            }
+          })
+          this.$apply()
+        }
+      }
+    })
+  }
+
+  dataApply() {
+    this.coverPhoto = this.$parent.globalData.userInfo
+      ? this.$parent.globalData.userInfo.avatar
+      : ''
+    this.slogan = this.$parent.globalData.userInfo
+      ? this.$parent.globalData.userInfo.slogan
+      : ''
+    this.avatar = this.$parent.globalData.userInfo
+      ? this.$parent.globalData.userInfo.avatar
+      : ''
+    this.userInfo = this.$parent.globalData.userInfo
+    this.$apply()
+  }
+
+  onShareAppMessage(res) {
+    if (res.from === 'button') {
+      console.log(res.target)
+    }
+    this.methods.listenerButton()
+    return {
+      title: this.slogan,
+      path: `/pages/find/pay?scene=${this.compliment_id}`
+    }
+  }
+
+  onLoad() {
+    this.dataApply()
+    wepy.updateShareMenu({
+      withShareTicket: true,
+      templateInfo: {
+        parameterList: [
+          {
+            name: 'compliment_id',
+            value: this.compliment_id
+          }
+        ]
+      }
+    })
+  }
+}
+</script>

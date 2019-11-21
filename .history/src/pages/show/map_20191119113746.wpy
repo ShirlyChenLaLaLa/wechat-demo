@@ -1,0 +1,72 @@
+<style lang="less">
+page {
+  height: 100%;
+}
+.container {
+  height: 100%;
+  background: #f9f7f7;
+}
+#map {
+  width: 100%;
+  height: 100%;
+}
+</style>
+<template>
+  <view class="container">
+    <map id="map" latitude="51.5074" polyline="{{polyline}}" longitude="0.127852" scale="12" bindcontroltap="controltap" markers="{{markers}}" bindmarkertap="markertap" polyline="{{polyline}}" bindregionchange="regionchange" show-location></map>
+  </view>
+</template>
+
+<script>
+import wepy from 'wepy'
+
+export default class Index extends wepy.page {
+  config = {
+    navigationBarTitleText: 'student.com demo2'
+  }
+  components = {}
+  data = {
+    polyline: [{
+      points: [{
+        longitude: 0.1308,
+        latitude: 51.5229
+      },{
+        longitude: 0.14232,
+        latitude: 51.5333
+      }, {
+        longitude: 0.127852,
+        latitude: 51.5074
+      }],
+      arrowLine: true,
+      color: '#fd8649',
+      width: 2,
+      dottedLine: true
+    },{
+      points: [{
+        longitude: 0.1508,
+        latitude: 51.7229
+      },{
+        longitude: 0.10232,
+        latitude: 51.6333
+      }, {
+        longitude: 0.127852,
+        latitude: 51.5074
+      }],
+      arrowLine: true,
+      color: '#fd8649',
+      width: 2,
+      dottedLine: true
+    }]
+  }
+  methods = {
+  }
+
+  events = {}
+
+  onShow() {
+  }
+
+  onLoad() {
+  }
+}
+</script>

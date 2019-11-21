@@ -1,0 +1,117 @@
+<style lang="less">
+page {
+  height: 100%;
+}
+.container {
+  height: 100%;
+  background: #f9f7f7;
+}
+.back {
+  position: absolute;
+  left: 0rpx;
+  bottom: 32rpx;
+  box-sizing: border-box;
+  width: 100%;
+  height: 200rpx;
+  padding: 32rpx;
+  z-index: 10;
+}
+#map {
+  width: 100%;
+  height: 100%;
+}
+</style>
+<template>
+  <view class="container">
+    <view class="back"></view>
+    <map id="map" latitude="51.5074" polyline="{{polyline}}" markers="{{markers}}" @markertap="markerTap" longitude="0.127852" scale="12" bindcontroltap="controltap" bindmarkertap="markertap" polyline="{{polyline}}" bindregionchange="regionchange" show-location></map>
+  </view>
+</template>
+
+<script>
+import wepy from 'wepy'
+import { getCoordinates } from '../../helpers/map'
+
+export default class Index extends wepy.page {
+  config = {
+    navigationBarTitleText: 'student.com demo2'
+  }
+  components = {}
+  data = {
+    polyline: [{
+      points: [{
+        longitude: 0.1308,
+        latitude: 51.5229
+      }, {
+        longitude: 0.14232,
+        latitude: 51.5333
+      }, {
+        longitude: 0.127852,
+        latitude: 51.5074
+      }],
+      arrowLine: true,
+      color: '#fd8649',
+      width: 5,
+    }, {
+      points: [{
+        longitude: 0.1308,
+        latitude: 51.5229
+      }, {
+        longitude: 0.11232,
+        latitude: 51.5733
+      }, {
+        longitude: 0.127852,
+        latitude: 51.5074
+      }],
+      arrowLine: true,
+      color: '#38b2a6',
+      width: 5,
+    }],
+    markers: [{
+      iconPath: "/imgs/position.png",
+      id: 0,
+      latitude: 51.5074,
+      longitude: 0.127852,
+      width: 50,
+      height: 50
+    }, {
+      iconPath: "/imgs/map-focus.png",
+      id: 1,
+      latitude: 51.5229,
+      longitude: 0.1308,
+      width: 50,
+      height: 50
+    }],
+  }
+  methods = {
+    markertap: (e) => {
+      console.log(e.markerId)
+    },
+  }
+
+  events = {}
+
+  onShow() {
+  }
+
+  onLoad() {
+    wepy.request({
+      method: 'GET',
+      url: 'https://www.student.com/apis/v1/map/directions?lat1=51.5306&lat2=51.5115&lon1=-0.114939&lon2=-0.115884&type=walking',
+      success: res => {
+        const routePoints = getCoordinates(res)
+        console.log(routePoints);
+        const formatRoutePoints = routePoints.map((points) => {
+          return {
+            latitude: points[0],
+            longitude: points[1]
+          }
+        })
+        this.polyline.points = formatRoutePoints;
+        console.log(formatRoutePoints)
+        this.$apply();
+      }
+    })
+  }
+}
+</script>
