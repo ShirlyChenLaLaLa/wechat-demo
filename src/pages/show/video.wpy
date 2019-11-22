@@ -217,7 +217,8 @@ export default class Index extends wepy.page {
   onShow() {
   }
 
-  onLoad() {
+  onLoad(option) {
+    console.log(option)
     this.videoContext = wx.createVideoContext('myVideo')
   }
 }
